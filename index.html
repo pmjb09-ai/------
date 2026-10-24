@@ -671,117 +671,59 @@
       black: { accent: '#0f172a', light: '#e2e8f0', dark: '#020617' }
     };
 
-    // ON LOAD INITIALIZATION
+    // 구글 Apps Script 웹 앱 URL
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzYh0v0A60z8goLamf4c5tspdIQR1VUEUI3HWG-KIXkDYLPKbDyAgViLZ7273oFEaviVQ/exec";
+
+    // ON LOAD INITIALIZATION (페이지 접속 시 구글 시트에서 데이터 불러오기)
     window.onload = function() {
-      loadStateFromStorage();
-      applyTheme(state.settings.theme || 'blue');
-      renderAll();
+      loadStateFromGAS();
     };
 
-    <script>
-  // 1. 구글 Apps Script 웹 앱 URL (1단계에서 복사한 주소 넣기)
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbygla-WUQY3_CbdpVOnvox5pp8a8hna0c8Mm4VebBHC4nateCaqKfE4FL-cJTAjXasDWA/exec";
+    function loadStateFromGAS() {
+      fetch(GAS_URL)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.state) {
+            // 구글 시트에 저장된 최신 데이터로 업데이트
+            state.settings = Object.assign({}, DEFAULT_STATE.settings, data.state.settings);
+            state.profile = Object.assign({}, DEFAULT_STATE.profile, data.state.profile);
+            state.photos = data.state.photos || [];
+            state.music = data.state.music || [];
+            state.guestbook = data.state.guestbook || [];
+          }
+          applyTheme(state.settings.theme || 'blue');
+          renderAll();
+        })
+        .catch(err => {
+          console.error("데이터 로드 실패:", err);
+          applyTheme(state.settings.theme || 'blue');
+          renderAll();
+        });
+    }
 
-  // 2. 페이지 접속 시 구글 시트에서 데이터 불러오기
-  document.addEventListener('DOMContentLoaded', () => {
-    loadDataFromGAS();
-  });
-
-  function loadDataFromGAS() {
-    fetch(GAS_URL)
+    // 구글 시트에 실시간 저장하는 함수
+    function saveStateToStorage() {
+      fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          payload: {
+            settings: state.settings,
+            profile: state.profile,
+            photos: state.photos,
+            music: state.music,
+            guestbook: state.guestbook
+          }
+        })
+      })
       .then(res => res.json())
       .then(data => {
-        // (A) 수정 모드로 바꾼 사이트 문구 반영
-        if (data.config) {
-          if (data.config.siteTitle) document.getElementById('site-title').innerText = data.config.siteTitle;
-          if (data.config.bio) document.getElementById('site-bio').innerText = data.config.bio;
-        }
-
-        // (B) 방명록 목록 출력
-        renderGuestbook(data.guestbook);
+        showToast("☁️ 구글 시트에 성공적으로 동기화되었습니다!");
       })
-      .catch(err => console.error("데이터 로드 실패:", err));
-  }
-
-  // 3. 웹사이트 수정 모드 [저장] 버튼 기능
-  function saveAdminConfig() {
-    const titleText = document.getElementById('site-title').innerText;
-    const bioText = document.getElementById('site-bio').innerText;
-
-    fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({
-        type: 'config',
-        payload: { siteTitle: titleText, bio: bioText }
-      })
-    })
-    .then(res => res.json())
-    .then(res => {
-      alert("사이트 설정이 구글 시트에 저장되었습니다!");
-    });
-  }
-
-  // 4. 방명록 작성 [등록] 버튼 기능
-  function saveGuestbook() {
-    const nameInput = document.getElementById('guest-name').value;
-    const msgInput = document.getElementById('guest-msg').value;
-
-    if (!nameInput || !msgInput) {
-      alert("이름과 내용을 모두 입력해 주세요.");
-      return;
+      .catch(err => {
+        console.error("저장 실패:", err);
+        showToast("⚠️ 클라우드 저장 실패!");
+      });
     }
-
-    fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({
-        type: 'guestbook',
-        payload: { name: nameInput, message: msgInput }
-      })
-    })
-    .then(res => res.json())
-    .then(res => {
-      alert("방명록이 등록되었습니다!");
-      document.getElementById('guest-name').value = '';
-      document.getElementById('guest-msg').value = '';
-      loadDataFromGAS(); // 화면 새로고침 없이 목록 업데이트
-    });
-  }
-
-  // 5. 방명록 목록 화면에 그려주는 함수
-  function renderGuestbook(guestbookData) {
-    const listContainer = document.getElementById('guestbook-list');
-    if (!listContainer) return;
-
-    listContainer.innerHTML = '';
-
-    // guestbookData[0]은 제목 행이므로 1번 행부터 반복
-    if (guestbookData && guestbookData.length > 1) {
-      for (let i = 1; i < guestbookData.length; i++) {
-        const row = guestbookData[i];
-        const item = document.createElement('div');
-        item.className = 'guestbook-item';
-        item.innerHTML = `<strong>${row[0]}</strong>: ${row[1]}`;
-        listContainer.appendChild(item);
-      }
-    }
-  }
-</script>
-
-    function saveStateToStorage() {
-      try {
-        const toSave = {
-          settings: state.settings,
-          profile: state.profile,
-          photos: state.photos,
-          music: state.music,
-          guestbook: state.guestbook
-        };
-        localStorage.setItem('chaebin_archive_state_v2', JSON.stringify(toSave));
-      } catch (e) {
-        showToast("⚠️ 저장 공간 한도 초과! 일부 사진 용량이 너무 클 수 있습니다.");
-      }
-    }
-
     // THEME APPLIER
     function applyTheme(themeKey) {
       const theme = THEMES[themeKey] || THEMES.blue;
