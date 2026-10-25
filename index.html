@@ -796,13 +796,13 @@
     }
 
     function renderHomeTab() {
-      document.getElementById('hero-badge-1').innerText = state.settings.badge1 || '✦ CREATIVE MOOD';
-      document.getElementById('hero-badge-2').innerText = state.settings.badge2 || '✦ ARCHIVE 0902';
+      document.getElementById('hero-badge-1').innerText = state.settings.badge1 || '✦ MADE BY YERI';
+      document.getElementById('hero-badge-2').innerText = state.settings.badge2 || '✦ BIRTHDAY 0902';
       
       const titleEl = document.getElementById('hero-main-title');
-      titleEl.innerHTML = (state.settings.heroTitle || '시선이 머무는 공간,\n채빈의 아카이브').replace(/\n/g, '<br>');
+      titleEl.innerHTML = (state.settings.heroTitle || '열어보든가 ¯\_(ツ)_/¯').replace(/\n/g, '<br>');
 
-      document.getElementById('hero-subtitle').innerText = state.settings.heroSubtitle || '';
+      document.getElementById('hero-subtitle').innerText = state.settings.heroSubtitle || ''; 
       document.getElementById('mood-emoji-display').innerText = state.settings.moodEmoji || '🕯️';
       document.getElementById('mood-status-display').innerText = state.settings.moodStatus || '';
     }
