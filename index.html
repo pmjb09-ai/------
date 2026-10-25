@@ -801,7 +801,7 @@
       
       const titleEl = document.getElementById('hero-main-title');
       titleEl.innerHTML = (state.settings.heroTitle || '열어보든가 ¯\_(ツ)_/¯').replace(/\n/g, '<br>');
-
+      
       document.getElementById('hero-subtitle').innerText = state.settings.heroSubtitle || ''; 
       document.getElementById('mood-emoji-display').innerText = state.settings.moodEmoji || '🕯️';
       document.getElementById('mood-status-display').innerText = state.settings.moodStatus || '';
