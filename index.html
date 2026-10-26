@@ -640,10 +640,10 @@
       selectedTheme: 'blue',
       settings: {
         titleLogo: '⋆˚𝕮𝖍𝖆𝖊𝕭𝖎𝖓',
-        heroTitle: '시선이 머무는 공간,\n채빈의 아카이브',
-        heroSubtitle: '취향과 생각, 소소한 일상을 기록해두는 나만의 시크 & 플레이풀 스페이스입니다.',
-        badge1: '✦ CREATIVE MOOD',
-        badge2: '✦ ARCHIVE 0902',
+        heroTitle: '열어보든가 ¯\_(ツ)_/¯',
+        heroSubtitle: '',
+        badge1: '✦ MADE BY YERI',
+        badge2: '✦ BIRTHDAY 0902',
         moodEmoji: '🕯️',
         moodStatus: '차분하게 내면에 집중하는 중',
         theme: 'blue'
@@ -702,10 +702,13 @@
     }
 
     // 구글 시트에 실시간 저장하는 함수
+    // 구글 시트에 실시간 저장하는 함수
     function saveStateToStorage() {
       fetch(GAS_URL, {
         method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
+          action: "saveState",
           payload: {
             settings: state.settings,
             profile: state.profile,
@@ -715,15 +718,15 @@
           }
         })
       })
-      .then(res => res.json())
-      .then(data => {
+      .then(res => res.text())
+      .then(text => {
         showToast("☁️ 구글 시트에 성공적으로 동기화되었습니다!");
       })
       .catch(err => {
         console.error("저장 실패:", err);
         showToast("⚠️ 클라우드 저장 실패!");
       });
-    }
+    
     // THEME APPLIER
     function applyTheme(themeKey) {
       const theme = THEMES[themeKey] || THEMES.blue;
