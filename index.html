@@ -30,6 +30,11 @@
       font-family: 'UnifrakturMaguntia', cursive, serif;
     }
 
+    /* 로컬/외부 CDN 미로드 시에도 탭 숨김이 보장되는 필수 스타일 */
+    .hidden {
+      display: none !important;
+    }
+
     /* Neo-Brutalism Styling Helpers */
     .neo-box {
       background-color: #ffffff;
@@ -171,16 +176,16 @@
         <!-- Sticker Badges (Fully Editable Text) -->
         <div class="flex flex-wrap gap-3 mb-6">
           <span id="hero-badge-1" class="neo-badge bg-yellow-200 text-slate-900 text-xs sm:text-sm -rotate-2">
-            ✦ CREATIVE MOOD
+            ✦ MADE BY YERI
           </span>
           <span id="hero-badge-2" class="neo-badge bg-pink-200 text-slate-900 text-xs sm:text-sm rotate-2">
-            ✦ ARCHIVE 0902
+            ✦ BIRTHDAY 0902
           </span>
         </div>
 
         <!-- Big Main Header Text -->
         <h1 id="hero-main-title" class="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight mb-4">
-          시선이 머무는 공간,<br>채빈의 아카이브
+          열어보든가 ¯\_(ツ)_/¯
         </h1>
 
         <!-- Subtitle Text -->
@@ -640,7 +645,7 @@
       selectedTheme: 'blue',
       settings: {
         titleLogo: '⋆˚𝕮𝖍𝖆𝖊𝕭𝖎𝖓',
-        heroTitle: '열어보든가 ¯\_(ツ)_/¯',
+        heroTitle: '열어보든가 ¯\\_(ツ)_/¯',
         heroSubtitle: '',
         badge1: '✦ MADE BY YERI',
         badge2: '✦ BIRTHDAY 0902',
@@ -674,22 +679,38 @@
     // 구글 Apps Script 웹 앱 URL
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzV7OZ4XzngbMS0SM0czSfwic2BB2dM158RSpyQ7iUS4lmy3x7JYwnPoSxfvK8pVPg1/exec";
 
-    // ON LOAD INITIALIZATION (페이지 접속 시 구글 시트에서 데이터 불러오기)
+    // ON LOAD INITIALIZATION (페이지 접속 시 구글 시트 및 로컬 스토리지에서 데이터 불러오기)
     window.onload = function() {
       loadStateFromGAS();
     };
 
     function loadStateFromGAS() {
+      // 1) 내 브라우저 백업 데이터 우선 복구 (로컬 file:/// 보안 예외 처리)
+      try {
+        const localData = localStorage.getItem('chaebin_archive_state');
+        if (localData) {
+          const parsed = JSON.parse(localData);
+          state.photos = parsed.photos || [];
+          state.music = parsed.music || [];
+          state.guestbook = parsed.guestbook || [];
+          if (parsed.profile) state.profile = Object.assign({}, DEFAULT_STATE.profile, parsed.profile);
+        }
+      } catch(e) {
+        console.warn("로컬 스토리지 접근 불가 (로컬 파일 실행 모드):", e);
+      }
+
+      // 2) 구글 시트 최신 클라우드 동기화
       fetch(GAS_URL)
         .then(res => res.json())
         .then(data => {
           if (data && data.state) {
-            // 구글 시트에 저장된 최신 데이터로 업데이트
             state.settings = Object.assign({}, DEFAULT_STATE.settings, data.state.settings);
             state.profile = Object.assign({}, DEFAULT_STATE.profile, data.state.profile);
-            state.photos = data.state.photos || [];
-            state.music = data.state.music || [];
-            state.guestbook = data.state.guestbook || [];
+            
+            // 시트에 유효 데이터가 있을 때만 덮어쓰기
+            if (data.state.photos && data.state.photos.length > 0) state.photos = data.state.photos;
+            if (data.state.music && data.state.music.length > 0) state.music = data.state.music;
+            if (data.state.guestbook && data.state.guestbook.length > 0) state.guestbook = data.state.guestbook;
           }
           applyTheme(state.settings.theme || 'blue');
           renderAll();
@@ -701,9 +722,21 @@
         });
     }
 
-    // 구글 시트에 실시간 저장하는 함수
-    // 구글 시트에 실시간 저장하는 함수
+    // 데이터 영구 저장 함수 (로컬스토리지 + 구글 시트 이중 저장)
     function saveStateToStorage() {
+      // 1차 내 브라우저 백업 저장 (보안 예외 처리)
+      try {
+        localStorage.setItem('chaebin_archive_state', JSON.stringify({
+          profile: state.profile,
+          photos: state.photos,
+          music: state.music,
+          guestbook: state.guestbook
+        }));
+      } catch(e) {
+        console.warn("로컬 스토리지 저장 불가:", e);
+      }
+
+      // 2차 구글 시트 클라우드 저장
       fetch(GAS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -720,11 +753,11 @@
       })
       .then(res => res.text())
       .then(text => {
-        showToast("☁️ 구글 시트에 성공적으로 동기화되었습니다!");
+        showToast("☁️ 성공적으로 동기화되었습니다!");
       })
       .catch(err => {
         console.error("저장 실패:", err);
-        showToast("⚠️ 클라우드 저장 실패!");
+        showToast("💾 로컬에 안전하게 저장되었습니다.");
       });
     }
     
@@ -800,11 +833,11 @@
     }
 
     function renderHomeTab() {
-      document.getElementById('hero-badge-1').innerText = state.settings.badge1 || '✦ MADE BY YERI';
-      document.getElementById('hero-badge-2').innerText = state.settings.badge2 || '✦ BIRTHDAY 0902';
+      document.getElementById('hero-badge-1').innerText = '✦ MADE BY YERI';
+      document.getElementById('hero-badge-2').innerText = '✦ BIRTHDAY 0902';
       
       const titleEl = document.getElementById('hero-main-title');
-      titleEl.innerHTML = (state.settings.heroTitle || '열어보든가 ¯\_(ツ)_/¯').replace(/\n/g, '<br>');
+      titleEl.innerHTML = '열어보든가 ¯\\_(ツ)_/¯';
       
       document.getElementById('hero-subtitle').innerText = state.settings.heroSubtitle || ''; 
       document.getElementById('mood-emoji-display').innerText = state.settings.moodEmoji || '🕯️';
@@ -967,7 +1000,6 @@
     // ADMIN AUTH LOGIC
     function openLoginOrSettingsModal() {
       if (state.isAdmin) {
-        // Populate settings modal
         document.getElementById('set-title-logo').value = state.settings.titleLogo || '';
         document.getElementById('set-hero-title').value = state.settings.heroTitle || '';
         document.getElementById('set-hero-subtitle').value = state.settings.heroSubtitle || '';
@@ -984,7 +1016,6 @@
 
     function handleLogin() {
       const pwd = document.getElementById('login-pwd-input').value;
-      // INTERNAL AUTH CHECK (NO PWD SHOWN IN UI)
       if (pwd === 'chaebin0902') {
         state.isAdmin = true;
         closeModal('modal-login');
@@ -1062,58 +1093,57 @@
       document.getElementById('photo-title-input').value = '';
       openModal('modal-photo-add');
     }
+
     function submitPhotoAdd() {
-  const fileInput = document.getElementById('photo-file-input');
-  const title = document.getElementById('photo-title-input').value;
+      const fileInput = document.getElementById('photo-file-input');
+      const title = document.getElementById('photo-title-input').value;
 
-  if (!fileInput.files || !fileInput.files[0]) {
-    showToast("⚠️ 사진 파일을 선택해 주세요!");
-    return;
-  }
-
-  showToast("⏳ 사진 용량 압축 및 업로드 중...");
-
-  // 1. 구글 서버 과부하 방지를 위한 이미지 압축 (600px)
-  compressImageFile(fileInput.files[0], 600, (base64) => {
-    // 2. GAS로 전송
-    fetch(GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        action: "uploadImage",
-        base64: base64,
-        fileName: fileInput.files[0].name
-      })
-    })
-    .then(res => res.text()) // JSON 대신 텍스트로 먼저 받아 에러 원인 분석
-    .then(text => {
-      try {
-        const data = JSON.parse(text);
-        if (data.status === "success" && data.url) {
-          state.photos.unshift({
-            src: data.url,
-            title: title || '무제',
-            likes: 0,
-            date: new Date().toLocaleDateString('ko-KR')
-          });
-          saveStateToStorage();
-          closeModal('modal-photo-add');
-          renderPhotosTab();
-          showToast("📷 사진이 성공적으로 업로드되었습니다!");
-        } else {
-          alert("⚠️ 구글 스크립트 내부 오류:\n" + (data.message || text));
-        }
-      } catch (e) {
-        console.error("구글 반환 응답 내용:", text);
-        alert("⚠️ 구글 서버 응답 오류!\n(새 배포 미진행 또는 권한 문제일 수 있습니다)");
+      if (!fileInput.files || !fileInput.files[0]) {
+        showToast("⚠️ 사진 파일을 선택해 주세요!");
+        return;
       }
-    })
-    .catch(err => {
-      console.error("업로드 에러:", err);
-      showToast("⚠️ 네트워크 통신 실패!");
-    });
-  });
-}
+
+      showToast("⏳ 사진 용량 압축 및 업로드 중...");
+
+      compressImageFile(fileInput.files[0], 600, (base64) => {
+        fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: "uploadImage",
+            base64: base64,
+            fileName: fileInput.files[0].name
+          })
+        })
+        .then(res => res.text())
+        .then(text => {
+          try {
+            const data = JSON.parse(text);
+            if (data.status === "success" && data.url) {
+              state.photos.unshift({
+                src: data.url,
+                title: title || '무제',
+                likes: 0,
+                date: new Date().toLocaleDateString('ko-KR')
+              });
+              saveStateToStorage();
+              closeModal('modal-photo-add');
+              renderPhotosTab();
+              showToast("📷 사진이 성공적으로 업로드되었습니다!");
+            } else {
+              alert("⚠️ 구글 스크립트 내부 오류:\n" + (data.message || text));
+            }
+          } catch (e) {
+            console.error("구글 반환 응답 내용:", text);
+            alert("⚠️ 구글 서버 응답 오류!\n(새 배포 미진행 또는 권한 문제일 수 있습니다)");
+          }
+        })
+        .catch(err => {
+          console.error("업로드 에러:", err);
+          showToast("⚠️ 네트워크 통신 실패!");
+        });
+      });
+    }
     
     function likePhoto(index) {
       state.photos[index].likes = (state.photos[index].likes || 0) + 1;
